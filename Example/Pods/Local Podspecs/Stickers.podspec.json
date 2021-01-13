@@ -1,6 +1,6 @@
 {
   "name": "Stickers",
-  "version": "0.2.4",
+  "version": "0.2.8",
   "summary": "Swift pod to add stickers on your images!",
   "description": "Swift pod to add stickers on your images ! Setup with urls or images.",
   "homepage": "https://github.com/ecocea/Stickers",
@@ -13,7 +13,7 @@
   },
   "source": {
     "git": "https://github.com/ecocea/Stickers.git",
-    "tag": "0.2.4"
+    "tag": "0.2.8"
   },
   "platforms": {
     "ios": "11"
