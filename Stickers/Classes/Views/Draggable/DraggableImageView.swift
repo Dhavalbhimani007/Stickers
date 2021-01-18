@@ -12,26 +12,27 @@ import AVFoundation
 
 public protocol DraggableItemDelegate {
     func isMoving() -> Void
-    func isStopping(_ image: DraggableImageView?) -> Void
+    func isStopping(view: DraggableImageView) -> Void
+    func didDelete(view: DraggableImageView) -> Void
 }
 
-public class DraggableImageView: GIFImageView {
+public class DraggableImageView: UIImageView {
     
-    var delegate: DraggableItemDelegate?
-    var binZone: CGRect?
-    var rotated: CGFloat = 0
-    let impact = UIImpactFeedbackGenerator()
-    var binCenter: CGPoint? {
+    public var delegate: DraggableItemDelegate!
+    public var binZone: CGRect?
+    public var rotated: CGFloat = 0
+    public let impact = UIImpactFeedbackGenerator()
+    public var binCenter: CGPoint? {
         if let binZone = binZone {
             return CGPoint(x: binZone.origin.x + binZone.width/2, y: binZone.origin.y + binZone.height/2)
         }
         return nil
     }
     
-    var currentSize: CGSize?
-    var distanceFromTouch: CGSize?
+    public var currentSize: CGSize?
+    public var distanceFromTouch: CGSize?
     
-    func setup(with superView: UIView) {
+    public func setup(with superView: UIView) {
         superView.addSubview(self)
         self.isUserInteractionEnabled = true
         
@@ -46,11 +47,11 @@ public class DraggableImageView: GIFImageView {
         self.addGestureRecognizer(panGesture)
     }
     
-    @objc func handlePan(recognizer: UIPanGestureRecognizer) {
+    @objc public func handlePan(recognizer: UIPanGestureRecognizer) {
         guard let superView = self.superview else { return }
         
         let translation = recognizer.translation(in: superView)
-        if let view = recognizer.view {
+        if let view = recognizer.view as? DraggableImageView {
             superView.bringSubviewToFront(view)
             view.center = CGPoint(x: view.center.x + translation.x, y: view.center.y + translation.y)
             
@@ -66,19 +67,20 @@ public class DraggableImageView: GIFImageView {
                     animateOutBinFrom(touch: touch)
                 }
             case .ended:
+                print(isInBinZone)
                 if isInBinZone(self.center) {
+                    delegate?.didDelete(view: view)
                     self.removeFromSuperview()
-                    delegate?.isStopping(self)
                 }
-                delegate?.isStopping(nil)
+                delegate?.isStopping(view: view)
             default:
-                delegate?.isStopping(nil)
+                delegate?.isStopping(view: view)
             }
         }
         recognizer.setTranslation(CGPoint.zero, in: superView)
     }
     
-    func animateInBin(binZone: CGRect, touch: CGPoint) {
+    public func animateInBin(binZone: CGRect, touch: CGPoint) {
         if currentSize == nil {
             //Rotate first
             let zKeyPath = "layer.presentationLayer.transform.rotation.z"
@@ -97,7 +99,7 @@ public class DraggableImageView: GIFImageView {
         })
     }
     
-    func animateOutBinFrom(touch: CGPoint) {
+    public func animateOutBinFrom(touch: CGPoint) {
         if let currentSize = self.currentSize, let distanceFromTouch = self.distanceFromTouch {
             UIView.animate(withDuration: 0.2, animations: {
                 self.frame.origin = CGPoint(x: touch.x-distanceFromTouch.width, y: touch.y-distanceFromTouch.height)
@@ -112,7 +114,7 @@ public class DraggableImageView: GIFImageView {
         }
     }
     
-    func isInBinZone(_ touch: CGPoint) -> Bool {
+    public func isInBinZone(_ touch: CGPoint) -> Bool {
         guard let binCenter = binCenter else { return false }
         if touch.x > binCenter.x - 40 && touch.x < binCenter.x + 40 && touch.y > binCenter.y - 40 && touch.y < binCenter.y + 40 {
             return true

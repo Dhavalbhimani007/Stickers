@@ -12,7 +12,7 @@ import NVActivityIndicatorView
 
 protocol StickersDatasource {
     var stickerImages: [Constants.StickerSource] { get }
-    func add(sticker: Sticker) -> Void
+    func add(image: UIImage) -> Void
 }
 
 class StickersContainerView: UIView{
@@ -23,9 +23,8 @@ class StickersContainerView: UIView{
     
     let screenHeight = UIScreen.main.bounds.height
     var datasource: StickersDatasource?
-    var stickers = [Sticker]()
-    open var images = [UIImage?]()
-    var isVisible: Bool = false
+    var images = [UIImage]()
+    
     override init(frame: CGRect) {
         super.init(frame: frame)
         setup()
@@ -61,25 +60,20 @@ class StickersContainerView: UIView{
         loader.startAnimating()
         let dispatchGroup = DispatchGroup()
         datasource.stickerImages.forEach { (value) in
-            let sticker = Sticker()
+            
             dispatchGroup.enter()
             switch value {
             case .image(let image):
-                sticker.image = image
-                stickers.append(sticker)
+                self.images.append(image)
                 dispatchGroup.leave()
             case .url(let url):
-                if !self.images.isEmpty {
-                    let image = images.remove(at: 0)
-                    sticker.image = image
+                KingfisherManager.shared.retrieveImage(with: url, options: nil, progressBlock: nil) { (image, error, _, _) in
+                    if let img = image {
+                        self.images.append(img)
+                    }
+                    dispatchGroup.leave()
+                    
                 }
-                sticker.url = url
-                let format = url.absoluteString.components(separatedBy: ".")
-                if let last = format.last  {
-                    sticker.isGif = (last == "gif")
-                }
-                self.stickers.append(sticker)
-                dispatchGroup.leave()
             }
         }
         dispatchGroup.notify(queue: .main, execute: {
@@ -104,8 +98,6 @@ class StickersContainerView: UIView{
                 self.frame.origin.y = self.screenHeight - section.rawValue
                 if section == .low {
                     self.collectionHeightConstraint.constant = Constants.Section.mid.rawValue - 70
-                    self.isVisible = false
-                    self.collectionView.reloadData()
                 } else {
                     self.collectionHeightConstraint.constant = section.rawValue - 70
                 }
@@ -122,20 +114,18 @@ class StickersContainerView: UIView{
 extension StickersContainerView: UICollectionViewDataSource, UICollectionViewDelegate {
     
     func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
-        return stickers.count
+        return images.count
     }
     
     func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
         let cell = collectionView.dequeueReusableCell(withReuseIdentifier: "stickersCell", for: indexPath as IndexPath) as! StickersCollectionCell
-        cell.imageView.prepareForReuse()
-        if self.stickers.count > indexPath.item {
-            cell.fillCell(sticker: stickers[indexPath.item], shouldAnimate: isVisible)
-        }
+        cell.imageView.image = images[indexPath.item]
         return cell
     }
     
     func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
-        datasource?.add(sticker: stickers[indexPath.item])
+        let item = images[indexPath.item]
+        datasource?.add(image: item)
     }
     
     func scrollViewDidScroll(_ scrollView: UIScrollView) {
